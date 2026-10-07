@@ -17,6 +17,7 @@ BADGE_FILES = {
 }
 
 
+# --- 설정 기본값 --- #
 with Path("setting.jsonl").open(encoding="utf-8") as file:
     presets = {
         setting["tag"]: setting
@@ -40,12 +41,14 @@ def setting_input(name, preset):
     return st.number_input(name, step=1, key=key)
 
 
+# --- 스티커 선택 --- #
 def save_sticker_selection(file_id, row, col, sticker_key):
     st.session_state["sticker_selections"][file_id][row, col] = (
         st.session_state[sticker_key]
     )
 
 
+# --- 이미지 미리보기 --- #
 def preview_image(source, top, bottom, guidelines=None):
     preview = source.convert("RGBA")
     width, height = preview.size
@@ -115,6 +118,8 @@ def add_stickers_preview_image(preview, settings, selections):
 
 st.logo("logo.svg", size="large", link=None, icon_image=None)
 
+
+# --- 사이드바 --- #
 with st.sidebar:
     uploaded_files = st.file_uploader(
         "이미지를 업로드하세요.",
@@ -143,6 +148,7 @@ with st.sidebar:
             settings[name] = setting_input(name, preset)
     st.divider()
 
+# --- 스티커 선택 변수 설정 --- #
 sticker_selections = st.session_state.setdefault("sticker_selections", {})
 for uploaded_file in uploaded_files or []:
     sticker_selections.setdefault(
@@ -152,6 +158,7 @@ for uploaded_file in uploaded_files or []:
 
 crop_tab, sticker_tab, result_tab = st.tabs(["이미지 자르기", "스티커", "결과"])
 
+# --- 이미지 자르기 탭 --- #
 with crop_tab:
     if uploaded_files:
         sorted_files = sorted(uploaded_files, key=lambda file: file.name)
@@ -180,6 +187,7 @@ with crop_tab:
     else:
         st.info("사이드바에서 이미지를 업로드하세요.")
 
+# --- 스티커 탭 --- #
 with sticker_tab:
     if uploaded_files:
         sorted_files = sorted(uploaded_files, key=lambda file: file.name)
