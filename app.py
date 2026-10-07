@@ -74,7 +74,7 @@ def preview_image(source, top, bottom, guidelines=None):
     return preview
 
 
-def sticker_preview_image(source, top, bottom):
+def crop_preview_image(source, top, bottom):
     width, height = source.size
 
     start = max(top, 0)
@@ -82,7 +82,7 @@ def sticker_preview_image(source, top, bottom):
     return source.crop((0, start, width, end))
 
 
-def add_sticker_badges(preview, settings, selections):
+def add_stickers_preview_image(preview, settings, selections):
     width, height = preview.size
 
     image_bytes = BytesIO()
@@ -214,10 +214,10 @@ with sticker_tab:
             else:
                 try:
                     with Image.open(BytesIO(uploaded_file.getvalue())) as source:
-                        preview = sticker_preview_image(
+                        preview = crop_preview_image(
                             source, settings["top"], settings["bottom"]
                         )
-                    preview = add_sticker_badges(preview, settings, selections)
+                    preview = add_stickers_preview_image(preview, settings, selections)
                     st.image(preview)
                 except (UnidentifiedImageError, OSError):
                     st.error("이미지 파일을 읽을 수 없습니다.")
