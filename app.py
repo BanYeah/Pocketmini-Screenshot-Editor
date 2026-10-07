@@ -3,11 +3,11 @@ import streamlit as st
 import base64
 import json
 import xml.etree.ElementTree as ET
+import cairosvg
 
 from pathlib import Path
 from io import BytesIO
 from PIL import Image, ImageDraw, UnidentifiedImageError
-
 
 BADGE_FILES = {
     "VIP": "vip.svg",
@@ -116,6 +116,68 @@ def add_stickers_preview_image(preview, settings, selections):
     return ET.tostring(svg, encoding="unicode")
 
 
+# --- PNG 복사 --- #
+st.session_state.setdefault("copied_images", set())
+
+
+def mark_image_copied(file_id):
+    st.session_state["copied_images"].add(file_id)
+
+
+@st.cache_resource
+def copy_png_image():
+    return st.components.v2.component(
+        "copy_png_image",
+        js="""
+        export default function({ data, setTriggerValue }) {
+            const selector = `.st-key-${CSS.escape(data.button_key)} button`;
+
+            const bytes = Uint8Array.from(atob(data.png), c => c.charCodeAt(0));
+            const png = new Blob([bytes], {type: "image/png"});
+
+            let button;
+            const copy = async event => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                if (!window.isSecureContext || !navigator.clipboard?.write || !window.ClipboardItem) {
+                    window.alert("이미지 복사를 지원하는 브라우저에서 HTTPS 또는 localhost로 열어주세요.");
+                    return;
+                }
+
+                button.disabled = true;
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({"image/png": png})
+                    ]);
+                    setTriggerValue("copied", true);
+                } catch (error) {
+                    window.alert("복사 실패: 클립보드 권한을 확인하세요.");
+                } finally {
+                    button.disabled = false;
+                }
+            };
+            const bind = () => {
+                const next = document.querySelector(selector);
+                if (next === button) return;
+                if (button) button.removeEventListener("click", copy, true);
+                button = next;
+                if (button) button.addEventListener("click", copy, true);
+            };
+            bind();
+
+            const observer = new MutationObserver(bind);
+            observer.observe(document.body, {childList: true, subtree: true});
+            return () => {
+                observer.disconnect();
+                if (button) button.removeEventListener("click", copy, true);
+            };
+        }
+        """,
+        isolate_styles=False,
+    )
+
+
+# --- 로고 --- #
 st.logo("logo.svg", size="large", link=None, icon_image=None)
 
 
@@ -146,7 +208,7 @@ with st.sidebar:
     with st.expander("col1 ~ col5", expanded=False):
         for name in ("col1", "col2", "col3", "col4", "col5"):
             settings[name] = setting_input(name, preset)
-    st.divider()
+
 
 # --- 스티커 선택 변수 설정 --- #
 sticker_selections = st.session_state.setdefault("sticker_selections", {})
@@ -232,5 +294,45 @@ with sticker_tab:
     else:
         st.info("사이드바에서 이미지를 업로드하세요.")
 
+# --- 결과 탭 --- #
 with result_tab:
-    st.info("처리 결과가 표시될 공간입니다.")
+    if uploaded_files:
+        if settings["top"] > settings["bottom"]:
+            st.warning("top은 bottom 이하로 설정하세요.")
+        else:
+            sorted_files = sorted(uploaded_files, key=lambda file: file.name)
+            for uploaded_file in sorted_files:
+                try:
+                    with Image.open(BytesIO(uploaded_file.getvalue())) as source:
+                        preview = crop_preview_image(
+                            source, settings["top"], settings["bottom"]
+                        )
+                    preview = add_stickers_preview_image(preview, settings, sticker_selections[uploaded_file.file_id])
+                    png = cairosvg.svg2png(bytestring=preview.encode("utf-8"))
+
+                    image_col, button_col = st.columns([9, 1], vertical_alignment="center")
+                    with image_col:
+                        st.image(png)
+                    with button_col:
+                        button_key = f"copy_image_{uploaded_file.file_id}"
+                        copied = copy_png_image()(
+                            data={
+                                "button_key": button_key,
+                                "name": uploaded_file.name,
+                                "png": base64.b64encode(png).decode("ascii"),
+                            },
+                            key=f"clipboard_{uploaded_file.file_id}",
+                            on_copied_change=lambda: None,
+                        )
+                        if copied.copied:
+                            mark_image_copied(uploaded_file.file_id)
+                        
+                        st.button(
+                            "복사",
+                            key=button_key,
+                            type="secondary" if uploaded_file.file_id in st.session_state["copied_images"] else "primary",
+                        )
+                except (UnidentifiedImageError, OSError):
+                    st.error("이미지 파일을 읽을 수 없습니다.")
+    else:
+        st.info("사이드바에서 이미지를 업로드하세요.")
