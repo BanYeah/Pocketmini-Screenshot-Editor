@@ -166,16 +166,17 @@ with crop_tab:
         with image_container:
             if settings["top"] > settings["bottom"]:
                 st.warning("top은 bottom 이하로 설정하세요.")
-            try:
-                on = st.toggle("스티커 가이드라인 표시")
-                with Image.open(BytesIO(uploaded_file.getvalue())) as source:
-                    preview = preview_image(
-                        source, settings["top"], settings["bottom"],
-                        guidelines=settings if on else None,
-                    )
-                st.image(preview)
-            except (UnidentifiedImageError, OSError):
-                st.error("이미지 파일을 읽을 수 없습니다.")
+            else:
+                try:
+                    on = st.toggle("스티커 가이드라인 표시")
+                    with Image.open(BytesIO(uploaded_file.getvalue())) as source:
+                        preview = preview_image(
+                            source, settings["top"], settings["bottom"],
+                            guidelines=settings if on else None,
+                        )
+                    st.image(preview)
+                except (UnidentifiedImageError, OSError):
+                    st.error("이미지 파일을 읽을 수 없습니다.")
     else:
         st.info("사이드바에서 이미지를 업로드하세요.")
 
@@ -210,15 +211,16 @@ with sticker_tab:
         with image_container:
             if settings["top"] > settings["bottom"]:
                 st.warning("top은 bottom 이하로 설정하세요.")
-            try:
-                with Image.open(BytesIO(uploaded_file.getvalue())) as source:
-                    preview = sticker_preview_image(
-                        source, settings["top"], settings["bottom"]
-                    )
-                preview = add_sticker_badges(preview, settings, selections)
-                st.image(preview)
-            except (UnidentifiedImageError, OSError):
-                st.error("이미지 파일을 읽을 수 없습니다.")
+            else:
+                try:
+                    with Image.open(BytesIO(uploaded_file.getvalue())) as source:
+                        preview = sticker_preview_image(
+                            source, settings["top"], settings["bottom"]
+                        )
+                    preview = add_sticker_badges(preview, settings, selections)
+                    st.image(preview)
+                except (UnidentifiedImageError, OSError):
+                    st.error("이미지 파일을 읽을 수 없습니다.")
     else:
         st.info("사이드바에서 이미지를 업로드하세요.")
 
