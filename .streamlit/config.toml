@@ -1,0 +1,9 @@
+[theme]
+base = "dark"
+font = "SchoolSafeBoardMarker"
+
+[[theme.fontFaces]]
+family = "SchoolSafeBoardMarker"
+url = "https://cdn.jsdelivr.net/gh/projectnoonnu/2511-1@1.0/HakgyoansimBoadmarkerR.woff2"
+weight = 400
+style = "normal"
